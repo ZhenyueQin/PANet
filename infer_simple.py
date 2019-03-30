@@ -6,7 +6,6 @@ import argparse
 import distutils.util
 import os
 import sys
-import pprint
 import subprocess
 from collections import defaultdict
 from six.moves import xrange
@@ -15,24 +14,18 @@ from six.moves import xrange
 import matplotlib
 matplotlib.use('Agg')
 
-import numpy as np
 import cv2
 
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
 
-import _init_paths
-import nn as mynn
-from core.config import cfg, cfg_from_file, cfg_from_list, assert_and_infer_cfg
-from core.test import im_detect_all
-from modeling.model_builder import Generalized_RCNN
+import lib.nn as mynn
+from lib.core.config import cfg, cfg_from_file, cfg_from_list, assert_and_infer_cfg
+from lib.core.test import im_detect_all
+from lib.modeling.model_builder import Generalized_RCNN
 import datasets.dummy_datasets as datasets
-import utils.misc as misc_utils
-import utils.net as net_utils
-import utils.vis as vis_utils
-from utils.detectron_weight_helper import load_detectron_weight
-from utils.timer import Timer
+from lib.nn.parallel import utils as misc_utils, utils as net_utils, utils as vis_utils
+from lib.nn.parallel.utils import load_detectron_weight
+from lib.nn.parallel.utils import Timer
 
 # OpenCL may be enabled by default in OpenCV3; disable it because it's not
 # thread safe and causes unwanted GPU memory allocations.

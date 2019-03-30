@@ -41,7 +41,7 @@ class BilinearInterpolation2d(nn.Module):
         )
         kernel[range(in_channels), range(out_channels), :, :] = bil_filt
 
-        self.upconv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size,
+        self.upconv = lib.nn.ConvTranspose2d(in_channels, out_channels, kernel_size,
                                          stride=self.up_scale, padding=self.padding)
 
         self.upconv.weight.data.copy_(torch.from_numpy(kernel))

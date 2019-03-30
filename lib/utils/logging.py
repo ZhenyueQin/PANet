@@ -28,7 +28,7 @@ import numpy as np
 import smtplib
 import sys
 
-from core.config import cfg
+from lib.core.config import cfg
 
 # Print lower precision floating point values than default FLOAT_REPR
 # Note! Has no use for json encode with C speedups

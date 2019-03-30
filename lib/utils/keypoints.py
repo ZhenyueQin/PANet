@@ -23,8 +23,8 @@ from __future__ import unicode_literals
 import cv2
 import numpy as np
 
-from core.config import cfg
-import utils.blob as blob_utils
+from lib.core.config import cfg
+from lib.nn.parallel import utils as blob_utils
 
 
 def get_keypoints():

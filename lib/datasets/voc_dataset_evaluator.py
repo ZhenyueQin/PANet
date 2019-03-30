@@ -26,11 +26,11 @@ import os
 import shutil
 import uuid
 
-from core.config import cfg
-from datasets.dataset_catalog import DATASETS
-from datasets.dataset_catalog import DEVKIT_DIR
-from datasets.voc_eval import voc_eval
-from utils.io import save_object
+from lib.core.config import cfg
+from lib.datasets.dataset_catalog import DATASETS
+from lib.datasets.dataset_catalog import DEVKIT_DIR
+from lib.datasets.voc_eval import voc_eval
+from lib.utils.io import save_object
 
 logger = logging.getLogger(__name__)
 

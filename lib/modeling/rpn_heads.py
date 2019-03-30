@@ -2,12 +2,12 @@ from torch import nn
 from torch.nn import init
 import torch.nn.functional as F
 
-from core.config import cfg
-from modeling.generate_anchors import generate_anchors
-from modeling.generate_proposals import GenerateProposalsOp
-from modeling.generate_proposal_labels import GenerateProposalLabelsOp
-import modeling.FPN as FPN
-import utils.net as net_utils
+from lib.core.config import cfg
+from lib.modeling.generate_anchors import generate_anchors
+from lib.modeling.generate_proposals import GenerateProposalsOp
+from lib.modeling.generate_proposal_labels import GenerateProposalLabelsOp
+import lib.modeling.FPN as FPN
+from lib.nn.parallel import utils as net_utils
 
 
 # ---------------------------------------------------------------------------- #
@@ -47,13 +47,13 @@ class single_scale_rpn_outputs(nn.Module):
         num_anchors = anchors.shape[0]
 
         # RPN hidden representation
-        self.RPN_conv = nn.Conv2d(self.dim_in, self.dim_out, 3, 1, 1)
+        self.RPN_conv = lib.nn.Conv2d(self.dim_in, self.dim_out, 3, 1, 1)
         # Proposal classification scores
         self.n_score_out = num_anchors * 2 if cfg.RPN.CLS_ACTIVATION == 'softmax' \
             else num_anchors
-        self.RPN_cls_score = nn.Conv2d(self.dim_out, self.n_score_out, 1, 1, 0)
+        self.RPN_cls_score = lib.nn.Conv2d(self.dim_out, self.n_score_out, 1, 1, 0)
         # Proposal bbox regression deltas
-        self.RPN_bbox_pred = nn.Conv2d(self.dim_out, num_anchors * 4, 1, 1, 0)
+        self.RPN_bbox_pred = lib.nn.Conv2d(self.dim_out, num_anchors * 4, 1, 1, 0)
 
         self.RPN_GenerateProposals = GenerateProposalsOp(anchors, spatial_scale)
         self.RPN_GenerateProposalLabels = GenerateProposalLabelsOp()

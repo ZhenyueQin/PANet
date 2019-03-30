@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch.autograd import Variable
 
-from core.config import cfg
-import nn as mynn
+from lib.core.config import cfg
+import lib.nn as mynn
 
 
 # ---------------------------------------------------------------------------- #
@@ -22,22 +22,22 @@ class keypoint_outputs(nn.Module):
 
         if cfg.KRCNN.USE_DECONV:
             # Apply ConvTranspose to the feature representation; results in 2x # upsampling
-            self.deconv = nn.ConvTranspose2d(
+            self.deconv = lib.nn.ConvTranspose2d(
                 dim_in, cfg.KRCNN.DECONV_DIM, cfg.KRCNN.DECONV_KERNEL,
                 2, padding=int(cfg.KRCNN.DECONV_KERNEL / 2) - 1)
             dim_in = cfg.KRCNN.DECONV_DIM
 
         if cfg.KRCNN.USE_DECONV_OUTPUT:
             # Use ConvTranspose to predict heatmaps; results in 2x upsampling
-            self.classify = nn.ConvTranspose2d(
+            self.classify = lib.nn.ConvTranspose2d(
                 dim_in, cfg.KRCNN.NUM_KEYPOINTS, cfg.KRCNN.DECONV_KERNEL,
                 2, padding=int(cfg.KRCNN.DECONV_KERNEL / 2 - 1))
         else:
             # Use Conv to predict heatmaps; does no upsampling
-            self.classify = nn.Conv2d(dim_in, cfg.KRCNN.NUM_KEYPOINTS, 1, 1, padding=0)
+            self.classify = lib.nn.Conv2d(dim_in, cfg.KRCNN.NUM_KEYPOINTS, 1, 1, padding=0)
 
         if self.upsample_heatmap:
-            # self.upsample = nn.UpsamplingBilinear2d(scale_factor=cfg.KRCNN.UP_SCALE)
+            # self.upsample = lib.nn.UpsamplingBilinear2d(scale_factor=cfg.KRCNN.UP_SCALE)
             self.upsample = mynn.BilinearInterpolation2d(
                 cfg.KRCNN.NUM_KEYPOINTS, cfg.KRCNN.NUM_KEYPOINTS, cfg.KRCNN.UP_SCALE)
 
@@ -142,13 +142,13 @@ class roi_pose_head_v1convX(nn.Module):
             module_list.append(nn.Conv2d(dim_in, hidden_dim, kernel_size, 1, pad_size))
             module_list.append(nn.ReLU(inplace=True))
             dim_in = hidden_dim
-        self.conv_fcn = nn.Sequential(*module_list)
+        self.conv_fcn = lib.nn.Sequential(*module_list)
         self.dim_out = hidden_dim
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        if isinstance(m, nn.Conv2d):
+        if isinstance(m, lib.nn.Conv2d):
             if cfg.KRCNN.CONV_INIT == 'GaussianFill':
                 init.normal_(m.weight, std=0.01)
             elif cfg.KRCNN.CONV_INIT == 'MSRAFill':

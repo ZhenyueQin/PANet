@@ -24,11 +24,8 @@ import six
 import logging
 import numpy as np
 
-import utils.boxes as box_utils
-import utils.keypoints as keypoint_utils
-import utils.segms as segm_utils
-import utils.blob as blob_utils
-from core.config import cfg
+from lib.nn.parallel import utils as box_utils, utils as keypoint_utils, utils as segm_utils
+from lib.core.config import cfg
 from .json_dataset import JsonDataset
 
 logger = logging.getLogger(__name__)

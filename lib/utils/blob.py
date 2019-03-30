@@ -31,7 +31,7 @@ from six.moves import cPickle as pickle
 import numpy as np
 import cv2
 
-from core.config import cfg
+from lib.core.config import cfg
 
 
 def get_image_blob(im, target_scale, target_max_size):

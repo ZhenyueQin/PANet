@@ -1,7 +1,6 @@
 """ Training Script """
 
 import argparse
-import distutils.util
 import os
 import sys
 import pickle
@@ -10,26 +9,22 @@ import traceback
 import logging
 from collections import defaultdict
 
-import numpy as np
 import yaml
 import torch
 from torch.autograd import Variable
-import torch.nn as nn
 import cv2
 cv2.setNumThreads(0)  # pytorch issue 1355: possible deadlock in dataloader
 
-import _init_paths  # pylint: disable=unused-import
-import nn as mynn
-import utils.net as net_utils
-import utils.misc as misc_utils
-from core.config import cfg, cfg_from_file, cfg_from_list, assert_and_infer_cfg
+import lib.nn as mynn
+from lib.nn.parallel import utils as net_utils, utils as misc_utils
+from lib.core.config import cfg, cfg_from_file, cfg_from_list, assert_and_infer_cfg
 from datasets.roidb import combined_roidb_for_training
-from modeling.model_builder import Generalized_RCNN
+from lib.modeling.model_builder import Generalized_RCNN
 from roi_data.loader import RoiDataLoader, MinibatchSampler, collate_minibatch
-from utils.detectron_weight_helper import load_detectron_weight
-from utils.logging import log_stats
-from utils.timer import Timer
-from utils.training_stats import TrainingStats
+from lib.nn.parallel.utils import load_detectron_weight
+from lib.nn.parallel.utils import log_stats
+from lib.nn.parallel.utils import Timer
+from lib.nn.parallel.utils import TrainingStats
 
 # OpenCL may be enabled by default in OpenCV3; disable it because it's not
 # thread safe and causes unwanted GPU memory allocations.

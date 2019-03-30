@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 
 import os
 
-from core.config import cfg
+from lib.core.config import cfg
 
 # Path to data dir
 _DATA_DIR = cfg.DATA_DIR

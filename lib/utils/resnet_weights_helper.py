@@ -6,9 +6,9 @@ import pickle
 
 import torch
 
-import nn as mynn
-import utils.detectron_weight_helper as dwh
-from core.config import cfg
+import lib.nn as mynn
+from lib.nn.parallel import utils as dwh
+from lib.core.config import cfg
 
 
 def load_pretrained_imagenet_weights(model):

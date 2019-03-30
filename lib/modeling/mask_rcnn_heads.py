@@ -7,10 +7,10 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch.autograd import Variable
 
-from core.config import cfg
-from modeling import ResNet
-import nn as mynn
-import utils.net as net_utils
+from lib.core.config import cfg
+from lib.modeling import ResNet
+import lib.nn as mynn
+from lib.nn.parallel import utils as net_utils
 
 
 # ---------------------------------------------------------------------------- #
@@ -26,10 +26,10 @@ class mask_rcnn_outputs(nn.Module):
         n_classes = cfg.MODEL.NUM_CLASSES if cfg.MRCNN.CLS_SPECIFIC_MASK else 1
         if cfg.MRCNN.USE_FC_OUTPUT:
             # Predict masks with a fully connected layer
-            self.classify = nn.Linear(dim_in, n_classes * cfg.MRCNN.RESOLUTION**2)
+            self.classify = lib.nn.Linear(dim_in, n_classes * cfg.MRCNN.RESOLUTION**2)
         else:
             # Predict mask using Conv
-            self.classify = nn.Conv2d(dim_in, n_classes, 1, 1, 0)
+            self.classify = lib.nn.Conv2d(dim_in, n_classes, 1, 1, 0)
             if cfg.MRCNN.UPSAMPLE_RATIO > 1:
                 self.upsample = mynn.BilinearInterpolation2d(
                     n_classes, n_classes, cfg.MRCNN.UPSAMPLE_RATIO)
@@ -155,19 +155,19 @@ class mask_rcnn_fcn_head_v1upXconvs(nn.Module):
         module_list = []
         for i in range(num_convs):
             module_list.extend([
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation),
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = dim_inner
-        self.conv_fcn = nn.Sequential(*module_list)
+        self.conv_fcn = lib.nn.Sequential(*module_list)
 
         # upsample layer
-        self.upconv = nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
+        self.upconv = lib.nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+        if isinstance(m, (nn.Conv2d, lib.nn.ConvTranspose2d)):
             if cfg.MRCNN.CONV_INIT == 'GaussianFill':
                 init.normal_(m.weight, std=0.001)
             elif cfg.MRCNN.CONV_INIT == 'MSRAFill':
@@ -219,20 +219,20 @@ class mask_rcnn_fcn_head_v1upXconvs_gn(nn.Module):
         module_list = []
         for i in range(num_convs):
             module_list.extend([
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = dim_inner
-        self.conv_fcn = nn.Sequential(*module_list)
+        self.conv_fcn = lib.nn.Sequential(*module_list)
 
         # upsample layer
-        self.upconv = nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
+        self.upconv = lib.nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+        if isinstance(m, (nn.Conv2d, lib.nn.ConvTranspose2d)):
             if cfg.MRCNN.CONV_INIT == 'GaussianFill':
                 init.normal_(m.weight, std=0.001)
             elif cfg.MRCNN.CONV_INIT == 'MSRAFill':
@@ -288,7 +288,7 @@ class mask_rcnn_fcn_head_v0upshare(nn.Module):
 
         self.res5 = None  # will be assigned later
         dim_conv5 = 2048
-        self.upconv5 = nn.ConvTranspose2d(dim_conv5, self.dim_out, 2, 2, 0)
+        self.upconv5 = lib.nn.ConvTranspose2d(dim_conv5, self.dim_out, 2, 2, 0)
 
         self._init_weights()
 
@@ -352,7 +352,7 @@ class mask_rcnn_fcn_head_v0up(nn.Module):
         self.dim_out = cfg.MRCNN.DIM_REDUCED
 
         self.res5, dim_out = ResNet_roi_conv5_head_for_masks(dim_in)
-        self.upconv5 = nn.ConvTranspose2d(dim_out, self.dim_out, 2, 2, 0)
+        self.upconv5 = lib.nn.ConvTranspose2d(dim_out, self.dim_out, 2, 2, 0)
 
         # Freeze all bn (affine) layers in resnet!!!
         self.res5.apply(
@@ -419,30 +419,30 @@ class mask_rcnn_fcn_head_v1upXconvs_gn_adp(nn.Module):
         module_list = []
         for i in range(num_convs - 1):
             module_list.extend([
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = dim_inner
-        self.conv_fcn = nn.Sequential(*module_list)
+        self.conv_fcn = lib.nn.Sequential(*module_list)
 
-        self.mask_conv1 = nn.ModuleList()
+        self.mask_conv1 = lib.nn.ModuleList()
         num_levels = cfg.FPN.ROI_MAX_LEVEL - cfg.FPN.ROI_MIN_LEVEL + 1
         for i in range(num_levels):
             self.mask_conv1.append(nn.Sequential(
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True)
             ))
 
 
         # upsample layer
-        self.upconv = nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
+        self.upconv = lib.nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+        if isinstance(m, (nn.Conv2d, lib.nn.ConvTranspose2d)):
             if cfg.MRCNN.CONV_INIT == 'GaussianFill':
                 init.normal_(m.weight, std=0.001)
             elif cfg.MRCNN.CONV_INIT == 'MSRAFill':
@@ -503,50 +503,50 @@ class mask_rcnn_fcn_head_v1upXconvs_gn_adp_ff(nn.Module):
         module_list = []
         for i in range(2):
             module_list.extend([
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = dim_inner
-        self.conv_fcn = nn.Sequential(*module_list)
+        self.conv_fcn = lib.nn.Sequential(*module_list)
 
-        self.mask_conv1 = nn.ModuleList()
+        self.mask_conv1 = lib.nn.ModuleList()
         num_levels = cfg.FPN.ROI_MAX_LEVEL - cfg.FPN.ROI_MIN_LEVEL + 1
         for i in range(num_levels):
             self.mask_conv1.append(nn.Sequential(
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True)
             ))
 
-        self.mask_conv4 = nn.Sequential(
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True))
+        self.mask_conv4 = lib.nn.Sequential(
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True))
 
-        self.mask_conv4_fc = nn.Sequential(
-                nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True))
+        self.mask_conv4_fc = lib.nn.Sequential(
+                lib.nn.Conv2d(dim_in, dim_inner, 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), dim_inner, eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True))
 
-        self.mask_conv5_fc = nn.Sequential(
-                nn.Conv2d(dim_in, int(dim_inner / 2), 3, 1, padding=1*dilation, dilation=dilation, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(dim_inner), int(dim_inner / 2), eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True))
+        self.mask_conv5_fc = lib.nn.Sequential(
+                lib.nn.Conv2d(dim_in, int(dim_inner / 2), 3, 1, padding=1*dilation, dilation=dilation, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(dim_inner), int(dim_inner / 2), eps=cfg.GROUP_NORM.EPSILON),
+                lib.nn.ReLU(inplace=True))
 
-        self.mask_fc = nn.Sequential(
-                nn.Linear(int(dim_inner / 2) * (cfg.MRCNN.ROI_XFORM_RESOLUTION) ** 2, cfg.MRCNN.RESOLUTION ** 2, bias=True),
-                nn.ReLU(inplace=True))
+        self.mask_fc = lib.nn.Sequential(
+                lib.nn.Linear(int(dim_inner / 2) * (cfg.MRCNN.ROI_XFORM_RESOLUTION) ** 2, cfg.MRCNN.RESOLUTION ** 2, bias=True),
+                lib.nn.ReLU(inplace=True))
 
 
 
         # upsample layer
-        self.upconv = nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
+        self.upconv = lib.nn.ConvTranspose2d(dim_inner, dim_inner, 2, 2, 0)
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+        if isinstance(m, (nn.Conv2d, lib.nn.ConvTranspose2d)):
             if cfg.MRCNN.CONV_INIT == 'GaussianFill':
                 init.normal_(m.weight, std=0.001)
             elif cfg.MRCNN.CONV_INIT == 'MSRAFill':
@@ -555,7 +555,7 @@ class mask_rcnn_fcn_head_v1upXconvs_gn_adp_ff(nn.Module):
                 raise ValueError
             if m.bias is not None:
                 init.constant_(m.bias, 0)
-        elif isinstance(m, nn.Linear):
+        elif isinstance(m, lib.nn.Linear):
             init.normal_(m.weight, std=0.01)
             init.constant_(m.bias, 0)
 

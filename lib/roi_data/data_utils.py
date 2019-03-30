@@ -26,9 +26,9 @@ import logging
 import numpy as np
 import threading
 
-from core.config import cfg
-from modeling.generate_anchors import generate_anchors
-import utils.boxes as box_utils
+from lib.core.config import cfg
+from lib.modeling.generate_anchors import generate_anchors
+from lib.nn.parallel import utils as box_utils
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,8 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from core.config import cfg
-import nn as mynn
+from lib.core.config import cfg
+import lib.nn as mynn
 
 logger = logging.getLogger(__name__)
 

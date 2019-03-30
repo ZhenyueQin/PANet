@@ -4,19 +4,19 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch.autograd import Variable
 
-from core.config import cfg
-import nn as mynn
-import utils.net as net_utils
+from lib.core.config import cfg
+import lib.nn as mynn
+from lib.nn.parallel import utils as net_utils
 
 
 class fast_rcnn_outputs(nn.Module):
     def __init__(self, dim_in):
         super().__init__()
-        self.cls_score = nn.Linear(dim_in, cfg.MODEL.NUM_CLASSES)
+        self.cls_score = lib.nn.Linear(dim_in, cfg.MODEL.NUM_CLASSES)
         if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG:  # bg and fg
-            self.bbox_pred = nn.Linear(dim_in, 4 * 2)
+            self.bbox_pred = lib.nn.Linear(dim_in, 4 * 2)
         else:
-            self.bbox_pred = nn.Linear(dim_in, 4 * cfg.MODEL.NUM_CLASSES)
+            self.bbox_pred = lib.nn.Linear(dim_in, 4 * cfg.MODEL.NUM_CLASSES)
 
         self._init_weights()
 
@@ -80,8 +80,8 @@ class roi_2mlp_head(nn.Module):
         self.dim_out = hidden_dim = cfg.FAST_RCNN.MLP_HEAD_DIM
 
         roi_size = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION
-        self.fc1 = nn.Linear(dim_in * roi_size**2, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc1 = lib.nn.Linear(dim_in * roi_size**2, hidden_dim)
+        self.fc2 = lib.nn.Linear(hidden_dim, hidden_dim)
 
         self._init_weights()
 
@@ -128,24 +128,24 @@ class roi_Xconv1fc_head(nn.Module):
         module_list = []
         for i in range(cfg.FAST_RCNN.NUM_STACKED_CONVS):
             module_list.extend([
-                nn.Conv2d(dim_in, hidden_dim, 3, 1, 1),
-                nn.ReLU(inplace=True)
+                lib.nn.Conv2d(dim_in, hidden_dim, 3, 1, 1),
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = hidden_dim
-        self.convs = nn.Sequential(*module_list)
+        self.convs = lib.nn.Sequential(*module_list)
 
         self.dim_out = fc_dim = cfg.FAST_RCNN.MLP_HEAD_DIM
         roi_size = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION
-        self.fc = nn.Linear(dim_in * roi_size * roi_size, fc_dim)
+        self.fc = lib.nn.Linear(dim_in * roi_size * roi_size, fc_dim)
 
         self._init_weights()
 
     def _init_weights(self):
         def _init(m):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, lib.nn.Conv2d):
                 mynn.init.MSRAFill(m.weight)
                 init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
+            elif isinstance(m, lib.nn.Linear):
                 mynn.init.XavierFill(m.weight)
                 init.constant_(m.bias, 0)
         self.apply(_init)
@@ -190,25 +190,25 @@ class roi_Xconv1fc_gn_head(nn.Module):
         module_list = []
         for i in range(cfg.FAST_RCNN.NUM_STACKED_CONVS):
             module_list.extend([
-                nn.Conv2d(dim_in, hidden_dim, 3, 1, 1, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+                lib.nn.Conv2d(dim_in, hidden_dim, 3, 1, 1, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = hidden_dim
-        self.convs = nn.Sequential(*module_list)
+        self.convs = lib.nn.Sequential(*module_list)
 
         self.dim_out = fc_dim = cfg.FAST_RCNN.MLP_HEAD_DIM
         roi_size = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION
-        self.fc = nn.Linear(dim_in * roi_size * roi_size, fc_dim)
+        self.fc = lib.nn.Linear(dim_in * roi_size * roi_size, fc_dim)
 
         self._init_weights()
 
     def _init_weights(self):
         def _init(m):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, lib.nn.Conv2d):
                 mynn.init.MSRAFill(m.weight)
-            elif isinstance(m, nn.Linear):
+            elif isinstance(m, lib.nn.Linear):
                 mynn.init.XavierFill(m.weight)
                 init.constant_(m.bias, 0)
         self.apply(_init)
@@ -254,34 +254,34 @@ class roi_Xconv1fc_gn_head_panet(nn.Module):
         module_list = []
         for i in range(cfg.FAST_RCNN.NUM_STACKED_CONVS - 1):
             module_list.extend([
-                nn.Conv2d(dim_in, hidden_dim, 3, 1, 1, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+                lib.nn.Conv2d(dim_in, hidden_dim, 3, 1, 1, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.ReLU(inplace=True)
             ])
             dim_in = hidden_dim
-        self.convs = nn.Sequential(*module_list)
+        self.convs = lib.nn.Sequential(*module_list)
 
         self.dim_out = fc_dim = cfg.FAST_RCNN.MLP_HEAD_DIM
         roi_size = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION
-        self.fc = nn.Linear(dim_in * roi_size * roi_size, fc_dim)
+        self.fc = lib.nn.Linear(dim_in * roi_size * roi_size, fc_dim)
         num_levels = cfg.FPN.ROI_MAX_LEVEL - cfg.FPN.ROI_MIN_LEVEL + 1
-        self.conv1_head = nn.ModuleList()
+        self.conv1_head = lib.nn.ModuleList()
         for i in range(num_levels):
             self.conv1_head.append(nn.Sequential(
-                nn.Conv2d(dim_in, hidden_dim, 3, 1, 1, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+                lib.nn.Conv2d(dim_in, hidden_dim, 3, 1, 1, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.ReLU(inplace=True)
             ))
 
         self._init_weights()
 
     def _init_weights(self):
         def _init(m):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, lib.nn.Conv2d):
                 mynn.init.MSRAFill(m.weight)
-            elif isinstance(m, nn.Linear):
+            elif isinstance(m, lib.nn.Linear):
                 mynn.init.XavierFill(m.weight)
                 init.constant_(m.bias, 0)
         self.apply(_init)
@@ -332,18 +332,18 @@ class roi_2mlp_head_gn(nn.Module):
         self.dim_out = hidden_dim = cfg.FAST_RCNN.MLP_HEAD_DIM
 
         roi_size = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION
-        self.fc1 = nn.Sequential(nn.Linear(dim_in * roi_size**2, hidden_dim), nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+        self.fc1 = lib.nn.Sequential(nn.Linear(dim_in * roi_size**2, hidden_dim), lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON))
-        self.fc2 = nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+        self.fc2 = lib.nn.Sequential(nn.Linear(hidden_dim, hidden_dim), lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON))
 
         self._init_weights()
 
     def _init_weights(self):
         def _init(m):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, lib.nn.Conv2d):
                 mynn.init.MSRAFill(m.weight)
-            elif isinstance(m, nn.Linear):
+            elif isinstance(m, lib.nn.Linear):
                 mynn.init.XavierFill(m.weight)
                 init.constant_(m.bias, 0)
         self.apply(_init)
@@ -384,28 +384,28 @@ class roi_2mlp_head_gn_panet(nn.Module):
 
         roi_size = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION
         num_levels = cfg.FPN.ROI_MAX_LEVEL - cfg.FPN.ROI_MIN_LEVEL + 1
-        self.fc1 = nn.ModuleList()
+        self.fc1 = lib.nn.ModuleList()
         for i in range(num_levels):
             self.fc1.append(nn.Sequential(
-                nn.Linear(dim_in * roi_size**2, hidden_dim), 
-                nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+                lib.nn.Linear(dim_in * roi_size**2, hidden_dim), 
+                lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON),
-                nn.ReLU(inplace=True)
+                lib.nn.ReLU(inplace=True)
             ))
-        #self.fc1 = nn.Sequential(nn.Linear(dim_in * roi_size**2, hidden_dim), nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+        #self.fc1 = lib.nn.Sequential(nn.Linear(dim_in * roi_size**2, hidden_dim), lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
         #                     eps=cfg.GROUP_NORM.EPSILON))
-        self.fc2 = nn.Sequential(nn.Linear(hidden_dim, hidden_dim), 
-                   nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
+        self.fc2 = lib.nn.Sequential(nn.Linear(hidden_dim, hidden_dim), 
+                   lib.nn.GroupNorm(net_utils.get_group_gn(hidden_dim), hidden_dim,
                              eps=cfg.GROUP_NORM.EPSILON),
-                   nn.ReLU(inplace=True))
+                   lib.nn.ReLU(inplace=True))
 
         self._init_weights()
 
     def _init_weights(self):
         def _init(m):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, lib.nn.Conv2d):
                 mynn.init.MSRAFill(m.weight)
-            elif isinstance(m, nn.Linear):
+            elif isinstance(m, lib.nn.Linear):
                 mynn.init.XavierFill(m.weight)
                 init.constant_(m.bias, 0)
         self.apply(_init)

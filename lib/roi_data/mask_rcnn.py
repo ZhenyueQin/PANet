@@ -22,13 +22,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
 import numpy as np
 
-from core.config import cfg
-import utils.blob as blob_utils
-import utils.boxes as box_utils
-import utils.segms as segm_utils
+from lib.core.config import cfg
+from lib.nn.parallel import utils as blob_utils, utils as box_utils, utils as segm_utils
 
 
 def add_mask_rcnn_blobs(blobs, sampled_boxes, roidb, im_scale, batch_idx):

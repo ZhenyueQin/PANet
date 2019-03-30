@@ -7,7 +7,7 @@ from itertools import chain
 
 import torch
 
-from core.config import cfg
+from lib.core.config import cfg
 
 
 def get_run_name():

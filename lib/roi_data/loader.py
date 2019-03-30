@@ -2,15 +2,16 @@ import math
 import numpy as np
 import numpy.random as npr
 
-import torch
 import torch.utils.data as data
 import torch.utils.data.sampler as torch_sampler
 from torch.utils.data.dataloader import default_collate
 from torch._six import int_classes as _int_classes
 
-from core.config import cfg
+from lib.core.config import cfg
 from roi_data.minibatch import get_minibatch
-import utils.blob as blob_utils
+from lib.nn.parallel import utils as blob_utils
+
+
 # from model.rpn.bbox_transform import bbox_transform_inv, clip_boxes
 
 

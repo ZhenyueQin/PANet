@@ -1,11 +1,10 @@
 import numpy as np
 from torch import nn
 
-from core.config import cfg
-from datasets import json_dataset
-import roi_data.fast_rcnn
-import utils.blob as blob_utils
-import utils.fpn as fpn_utils
+from lib.core.config import cfg
+from lib.datasets import json_dataset
+import lib.roi_data.fast_rcnn
+from lib.nn.parallel import utils as fpn_utils
 
 
 class CollectAndDistributeFpnRpnProposalsOp(nn.Module):

@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-import nn.functional as myF
+import torch.nn.functional as myF
 
 
 class GroupNorm(nn.Module):
@@ -14,8 +14,8 @@ class GroupNorm(nn.Module):
         self.eps = eps
         self.affine = affine
         if self.affine:
-            self.weight = nn.Parameter(torch.Tensor(num_channels))
-            self.bias = nn.Parameter(torch.Tensor(num_channels))
+            self.weight = lib.nn.Parameter(torch.Tensor(num_channels))
+            self.bias = lib.nn.Parameter(torch.Tensor(num_channels))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)

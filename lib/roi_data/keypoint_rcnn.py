@@ -25,9 +25,8 @@ from __future__ import unicode_literals
 
 import numpy as np
 
-from core.config import cfg
-import utils.blob as blob_utils
-import utils.keypoints as keypoint_utils
+from lib.core.config import cfg
+from lib.nn.parallel import utils as blob_utils, utils as keypoint_utils
 
 
 def add_keypoint_rcnn_blobs(blobs, roidb, fg_rois_per_image, fg_inds, im_scale,
@@ -90,7 +89,7 @@ def finalize_keypoint_minibatch(blobs, valid):
     valid = (valid and len(blobs['keypoint_weights']) > 0
              and num_visible_keypoints > min_count)
     # Normalizer to use if cfg.KRCNN.NORMALIZE_BY_VISIBLE_KEYPOINTS is False.
-    # See modeling.model_builder.add_keypoint_losses
+    # See lib.modeling.model_builder.add_keypoint_losses
     norm = num_visible_keypoints / (
         cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.BATCH_SIZE_PER_IM * cfg.TRAIN.
         FG_FRACTION * cfg.KRCNN.NUM_KEYPOINTS)

@@ -1,9 +1,9 @@
 import numpy as np
 import cv2
 
-from core.config import cfg
-import utils.blob as blob_utils
-import roi_data.rpn
+from lib.core.config import cfg
+from lib.nn.parallel import utils as blob_utils
+import lib.roi_data.rpn
 
 
 def get_minibatch_blob_names(is_training=True):

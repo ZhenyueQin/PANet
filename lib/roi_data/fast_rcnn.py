@@ -25,12 +25,10 @@ from __future__ import unicode_literals
 import numpy as np
 import numpy.random as npr
 
-from core.config import cfg
-import roi_data.keypoint_rcnn
-import roi_data.mask_rcnn
-import utils.boxes as box_utils
-import utils.blob as blob_utils
-import utils.fpn as fpn_utils
+from lib.core.config import cfg
+import lib.roi_data.keypoint_rcnn
+import lib.roi_data.mask_rcnn
+from lib.nn.parallel import utils as box_utils, utils as blob_utils, utils as fpn_utils
 
 
 def get_fast_rcnn_blob_names(is_training=True):
@@ -251,7 +249,7 @@ def _expand_bbox_targets(bbox_target_data):
 def _add_multilevel_rois(blobs):
     """By default training RoIs are added for a single feature map level only.
     When using FPN, the RoIs must be distributed over different FPN levels
-    according the level assignment heuristic (see: modeling.FPN.
+    according the level assignment heuristic (see: lib.modeling.FPN.
     map_rois_to_fpn_levels).
     """
     lvl_min = cfg.FPN.ROI_MIN_LEVEL

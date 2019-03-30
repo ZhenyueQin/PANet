@@ -4,7 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import six
-import os
 import os.path as osp
 import copy
 from ast import literal_eval
@@ -16,8 +15,8 @@ import torch.nn as nn
 from torch.nn import init
 import yaml
 
-import nn as mynn
-from utils.collections import AttrDict
+# import lib.nn as mynn
+from lib.utils.collections import AttrDict
 
 __C = AttrDict()
 # Consumers can get config by:
@@ -392,7 +391,7 @@ __C.TEST.BBOX_VOTE.SCORING_METHOD_BETA = 1.0
 __C.MODEL = AttrDict()
 
 # The type of model to use
-# The string must match a function in the modeling.model_builder module
+# The string must match a function in the lib.modeling.model_builder module
 # (e.g., 'generalized_rcnn', 'mask_rcnn', ...)
 __C.MODEL.TYPE = ''
 
@@ -616,7 +615,7 @@ __C.SOLVER.LOG_LR_CHANGE_THRESHOLD = 1.1
 __C.FAST_RCNN = AttrDict()
 
 # The type of RoI head to use for bounding box classification and regression
-# The string must match a function this is imported in modeling.model_builder
+# The string must match a function this is imported in lib.modeling.model_builder
 # (e.g., 'head_builder.add_roi_2mlp_head' to specify a two hidden layer MLP)
 __C.FAST_RCNN.ROI_BOX_HEAD = ''
 
@@ -733,7 +732,7 @@ __C.FPN.USE_GN = False
 __C.MRCNN = AttrDict()
 
 # The type of RoI head to use for instance mask prediction
-# The string must match a function this is imported in modeling.model_builder
+# The string must match a function this is imported in lib.modeling.model_builder
 # (e.g., 'mask_rcnn_heads.ResNet_mask_rcnn_fcn_head_v1up4convs')
 __C.MRCNN.ROI_MASK_HEAD = ''
 
@@ -784,7 +783,7 @@ __C.MRCNN.MEMORY_EFFICIENT_LOSS = True  # TODO
 __C.KRCNN = AttrDict()
 
 # The type of RoI head to use for instance keypoint prediction
-# The string must match a function this is imported in modeling.model_builder
+# The string must match a function this is imported in lib.modeling.model_builder
 # (e.g., 'keypoint_rcnn_heads.add_roi_pose_head_v1convX')
 __C.KRCNN.ROI_KEYPOINTS_HEAD = ''
 
@@ -851,7 +850,7 @@ __C.KRCNN.LOSS_WEIGHT = 1.0
 
 # Normalize by the total number of visible keypoints in the minibatch if True.
 # Otherwise, normalize by the total number of keypoints that could ever exist
-# in the minibatch. See comments in modeling.model_builder.add_keypoint_losses
+# in the minibatch. See comments in lib.modeling.model_builder.add_keypoint_losses
 # for detailed discussion.
 __C.KRCNN.NORMALIZE_BY_VISIBLE_KEYPOINTS = True
 
@@ -1026,13 +1025,14 @@ def assert_and_infer_cfg(make_immutable=True):
         init.uniform_ = init.uniform
         init.normal_ = init.normal
         init.constant_ = init.constant
-        nn.GroupNorm = mynn.GroupNorm
+        lib.nn.GroupNorm = mynn.GroupNorm
     if make_immutable:
         cfg.immutable(True)
 
 
 def merge_cfg_from_file(cfg_filename):
     """Load a yaml config file and merge it into the global config."""
+
     with open(cfg_filename, 'r') as f:
         yaml_cfg = AttrDict(yaml.load(f))
     _merge_a_into_b(yaml_cfg, __C)

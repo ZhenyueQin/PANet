@@ -2,10 +2,9 @@ import logging
 import numpy as np
 import numpy.random as npr
 
-from core.config import cfg
-import roi_data.data_utils as data_utils
-import utils.blob as blob_utils
-import utils.boxes as box_utils
+from lib.core.config import cfg
+import lib.roi_data.data_utils as data_utils
+from lib.nn.parallel import utils as blob_utils, utils as box_utils
 
 logger = logging.getLogger(__name__)
 

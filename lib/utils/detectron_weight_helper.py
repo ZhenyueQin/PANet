@@ -31,8 +31,8 @@ if __name__ == '__main__':
     from pprint import pprint
     import sys
     sys.path.insert(0, '..')
-    from modeling.model_builder import Generalized_RCNN
-    from core.config import cfg, cfg_from_file
+    from lib.modeling.model_builder import Generalized_RCNN
+    from lib.core.config import cfg, cfg_from_file
 
     cfg.MODEL.NUM_CLASSES = 81
     cfg_from_file('../../cfgs/res50_mask.yml')

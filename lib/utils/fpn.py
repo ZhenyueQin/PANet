@@ -1,7 +1,7 @@
 import numpy as np
 
-import utils.boxes as box_utils
-from core.config import cfg
+from lib.nn.parallel import utils as box_utils
+from lib.core.config import cfg
 
 
 # ---------------------------------------------------------------------------- #

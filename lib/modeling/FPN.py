@@ -1,18 +1,16 @@
 import collections
-import numpy as np
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 
-from core.config import cfg
-import utils.net as net_utils
-import modeling.ResNet as ResNet
-from modeling.generate_anchors import generate_anchors
-from modeling.generate_proposals import GenerateProposalsOp
-from modeling.collect_and_distribute_fpn_rpn_proposals import CollectAndDistributeFpnRpnProposalsOp
-import nn as mynn
+from lib.core.config import cfg
+from lib.nn.parallel import utils as net_utils
+import lib.modeling.ResNet as ResNet
+from lib.modeling.generate_anchors import generate_anchors
+from lib.modeling.generate_proposals import GenerateProposalsOp
+from lib.modeling.collect_and_distribute_fpn_rpn_proposals import CollectAndDistributeFpnRpnProposalsOp
+import lib.nn as mynn
 
 # Lowest and highest pyramid levels in the backbone network. For FPN, we assume
 # that all networks have 5 spatial reductions, each by a factor of 2. Level 1
@@ -99,17 +97,17 @@ class fpn(nn.Module):
         # Step 1: recursively build down starting from the coarsest backbone level
         #
         # For the coarest backbone level: 1x1 conv only seeds recursion
-        self.conv_top = nn.Conv2d(fpn_dim_lateral[0], fpn_dim, 1, 1, 0)
+        self.conv_top = lib.nn.Conv2d(fpn_dim_lateral[0], fpn_dim, 1, 1, 0)
         if cfg.FPN.USE_GN:
-            self.conv_top = nn.Sequential(
-                nn.Conv2d(fpn_dim_lateral[0], fpn_dim, 1, 1, 0, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
+            self.conv_top = lib.nn.Sequential(
+                lib.nn.Conv2d(fpn_dim_lateral[0], fpn_dim, 1, 1, 0, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
                              eps=cfg.GROUP_NORM.EPSILON)
             )
         else:
-            self.conv_top = nn.Conv2d(fpn_dim_lateral[0], fpn_dim, 1, 1, 0)
-        self.topdown_lateral_modules = nn.ModuleList()
-        self.posthoc_modules = nn.ModuleList()
+            self.conv_top = lib.nn.Conv2d(fpn_dim_lateral[0], fpn_dim, 1, 1, 0)
+        self.topdown_lateral_modules = lib.nn.ModuleList()
+        self.posthoc_modules = lib.nn.ModuleList()
 
         # For other levels add top-down and lateral connections
         for i in range(self.num_backbone_stages - 1):
@@ -121,41 +119,41 @@ class fpn(nn.Module):
         for i in range(self.num_backbone_stages):
             if cfg.FPN.USE_GN:
                 self.posthoc_modules.append(nn.Sequential(
-                    nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1, bias=False),
-                    nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
+                    lib.nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1, bias=False),
+                    lib.nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
                                  eps=cfg.GROUP_NORM.EPSILON)
                 ))
             else:
                 self.posthoc_modules.append(
-                    nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1)
+                    lib.nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1)
                 )
 
             self.spatial_scale.append(fpn_level_info.spatial_scales[i])
 
         # add for panet buttom-up path
         if self.panet_buttomup:
-            self.panet_buttomup_conv1_modules = nn.ModuleList()
-            self.panet_buttomup_conv2_modules = nn.ModuleList()
+            self.panet_buttomup_conv1_modules = lib.nn.ModuleList()
+            self.panet_buttomup_conv2_modules = lib.nn.ModuleList()
             for i in range(self.num_backbone_stages - 1):
                 if cfg.FPN.USE_GN:
                     self.panet_buttomup_conv1_modules.append(nn.Sequential(
-                        nn.Conv2d(fpn_dim, fpn_dim, 3, 2, 1, bias=True),
-                        nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
+                        lib.nn.Conv2d(fpn_dim, fpn_dim, 3, 2, 1, bias=True),
+                        lib.nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
                                     eps=cfg.GROUP_NORM.EPSILON),
-                        nn.ReLU(inplace=True)
+                        lib.nn.ReLU(inplace=True)
                     ))
                     self.panet_buttomup_conv2_modules.append(nn.Sequential(
-                        nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1, bias=True),
-                        nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
+                        lib.nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1, bias=True),
+                        lib.nn.GroupNorm(net_utils.get_group_gn(fpn_dim), fpn_dim,
                                     eps=cfg.GROUP_NORM.EPSILON),
-                        nn.ReLU(inplace=True)
+                        lib.nn.ReLU(inplace=True)
                     ))
                 else:
                     self.panet_buttomup_conv1_modules.append(
-                        nn.Conv2d(fpn_dim, fpn_dim, 3, 2, 1)
+                        lib.nn.Conv2d(fpn_dim, fpn_dim, 3, 2, 1)
                     )
                     self.panet_buttomup_conv2_modules.append(
-                        nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1)
+                        lib.nn.Conv2d(fpn_dim, fpn_dim, 3, 1, 1)
                     )
 
                 #self.spatial_scale.append(fpn_level_info.spatial_scales[i])
@@ -168,16 +166,16 @@ class fpn(nn.Module):
         if not cfg.FPN.EXTRA_CONV_LEVELS and max_level == HIGHEST_BACKBONE_LVL + 1:
             # Original FPN P6 level implementation from our CVPR'17 FPN paper
             # Use max pooling to simulate stride 2 subsampling
-            self.maxpool_p6 = nn.MaxPool2d(kernel_size=1, stride=2, padding=0)
+            self.maxpool_p6 = lib.nn.MaxPool2d(kernel_size=1, stride=2, padding=0)
             self.spatial_scale.insert(0, self.spatial_scale[0] * 0.5)
 
         # Coarser FPN levels introduced for RetinaNet
         if cfg.FPN.EXTRA_CONV_LEVELS and max_level > HIGHEST_BACKBONE_LVL:
-            self.extra_pyramid_modules = nn.ModuleList()
+            self.extra_pyramid_modules = lib.nn.ModuleList()
             dim_in = fpn_level_info.dims[0]
             for i in range(HIGHEST_BACKBONE_LVL + 1, max_level + 1):
                 self.extra_pyramid_modules(
-                    nn.Conv2d(dim_in, fpn_dim, 3, 2, 1)
+                    lib.nn.Conv2d(dim_in, fpn_dim, 3, 2, 1)
                 )
                 dim_in = fpn_dim
                 self.spatial_scale.insert(0, self.spatial_scale[0] * 0.5)
@@ -194,14 +192,14 @@ class fpn(nn.Module):
 
     def _init_weights(self):
         def init_func(m):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, lib.nn.Conv2d):
                 mynn.init.XavierFill(m.weight)
                 #mynn.init.MSRAFill(m.weight)
                 if m.bias is not None:
                     init.constant_(m.bias, 0)
 
         for child_m in self.children():
-            if (not isinstance(child_m, nn.ModuleList) or
+            if (not isinstance(child_m, lib.nn.ModuleList) or
                 not isinstance(child_m[0], topdown_lateral_module)):
                 # topdown_lateral_module has its own init method
                 child_m.apply(init_func)
@@ -318,13 +316,13 @@ class topdown_lateral_module(nn.Module):
         self.dim_in_lateral = dim_in_lateral
         self.dim_out = dim_in_top
         if cfg.FPN.USE_GN:
-            self.conv_lateral = nn.Sequential(
-                nn.Conv2d(dim_in_lateral, self.dim_out, 1, 1, 0, bias=False),
-                nn.GroupNorm(net_utils.get_group_gn(self.dim_out), self.dim_out,
+            self.conv_lateral = lib.nn.Sequential(
+                lib.nn.Conv2d(dim_in_lateral, self.dim_out, 1, 1, 0, bias=False),
+                lib.nn.GroupNorm(net_utils.get_group_gn(self.dim_out), self.dim_out,
                              eps=cfg.GROUP_NORM.EPSILON)
             )
         else:
-            self.conv_lateral = nn.Conv2d(dim_in_lateral, self.dim_out, 1, 1, 0)
+            self.conv_lateral = lib.nn.Conv2d(dim_in_lateral, self.dim_out, 1, 1, 0)
 
         self._init_weights()
 
@@ -383,13 +381,13 @@ class fpn_rpn_outputs(nn.Module):
         num_anchors = len(cfg.FPN.RPN_ASPECT_RATIOS)
 
         # Create conv ops shared by all FPN levels
-        self.FPN_RPN_conv = nn.Conv2d(dim_in, self.dim_out, 3, 1, 1)
+        self.FPN_RPN_conv = lib.nn.Conv2d(dim_in, self.dim_out, 3, 1, 1)
         dim_score = num_anchors * 2 if cfg.RPN.CLS_ACTIVATION == 'softmax' \
             else num_anchors
-        self.FPN_RPN_cls_score = nn.Conv2d(self.dim_out, dim_score, 1, 1, 0)
-        self.FPN_RPN_bbox_pred = nn.Conv2d(self.dim_out, 4 * num_anchors, 1, 1, 0)
+        self.FPN_RPN_cls_score = lib.nn.Conv2d(self.dim_out, dim_score, 1, 1, 0)
+        self.FPN_RPN_bbox_pred = lib.nn.Conv2d(self.dim_out, 4 * num_anchors, 1, 1, 0)
 
-        self.GenerateProposals_modules = nn.ModuleList()
+        self.GenerateProposals_modules = lib.nn.ModuleList()
         k_max = cfg.FPN.RPN_MAX_LEVEL  # coarsest level of pyramid
         k_min = cfg.FPN.RPN_MIN_LEVEL  # finest level of pyramid
         for lvl in range(k_min, k_max + 1):

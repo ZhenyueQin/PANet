@@ -31,17 +31,18 @@ import logging
 import numpy as np
 import os
 import scipy.sparse
+import lib.utils.env
 
 # Must happen before importing COCO API (which imports matplotlib)
-import utils.env as envu
-envu.set_up_matplotlib()
+from lib.nn.parallel import utils as box_utils
+
+lib.utils.env.set_up_matplotlib()
 # COCO API
 from pycocotools import mask as COCOmask
 from pycocotools.coco import COCO
 
-import utils.boxes as box_utils
-from core.config import cfg
-from utils.timer import Timer
+from lib.core.config import cfg
+from lib.utils.timer import Timer
 from .dataset_catalog import ANN_FN
 from .dataset_catalog import DATASETS
 from .dataset_catalog import IM_DIR

@@ -12,8 +12,7 @@ import sys
 
 import cityscapesscripts.evaluation.instances2dict_with_polygons as cs
 
-import utils.segms as segms_util
-import utils.boxes as bboxs_util
+from lib.nn.parallel import utils as segms_util, utils as bboxs_util
 
 
 def parse_args():

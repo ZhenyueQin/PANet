@@ -24,13 +24,11 @@ from __future__ import unicode_literals
 
 from collections import defaultdict, OrderedDict
 import datetime
-import numpy as np
 
-from core.config import cfg
-from utils.logging import log_stats
-from utils.logging import SmoothedValue
-from utils.timer import Timer
-import utils.net as nu
+from lib.core.config import cfg
+from lib.nn.parallel.utils import log_stats
+from lib.nn.parallel.utils import SmoothedValue
+from lib.nn.parallel.utils import Timer
 
 
 class TrainingStats(object):

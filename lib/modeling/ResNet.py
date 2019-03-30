@@ -1,14 +1,11 @@
-import os
 from collections import OrderedDict
 
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from core.config import cfg
-import nn as mynn
-import utils.net as net_utils
-from utils.resnet_weights_helper import convert_state_dict
+from lib.core.config import cfg
+import lib.nn as mynn
+from lib.nn.parallel import utils as net_utils
+
 
 # ---------------------------------------------------------------------------- #
 # Bits for specific architectures (ResNet50, ResNet101, ...)
@@ -125,7 +122,7 @@ class ResNet_roi_conv5_head(nn.Module):
         stride_init = cfg.FAST_RCNN.ROI_XFORM_RESOLUTION // 7
         self.res5, self.dim_out = add_stage(dim_in, 2048, dim_bottleneck * 8, 3,
                                             dilation=1, stride_init=stride_init)
-        self.avgpool = nn.AvgPool2d(7)
+        self.avgpool = lib.nn.AvgPool2d(7)
 
         self._init_modules()
 
@@ -158,7 +155,7 @@ class ResNet_roi_conv5_head(nn.Module):
 def add_stage(inplanes, outplanes, innerplanes, nblocks, dilation=1, stride_init=2):
     """Make a stage consist of `nblocks` residual blocks.
     Returns:
-        - stage module: an nn.Sequentail module of residual blocks
+        - stage module: an lib.nn.Sequentail module of residual blocks
         - final output dimension
     """
     res_blocks = []
@@ -170,7 +167,7 @@ def add_stage(inplanes, outplanes, innerplanes, nblocks, dilation=1, stride_init
         inplanes = outplanes
         stride = 1
 
-    return nn.Sequential(*res_blocks), outplanes
+    return lib.nn.Sequential(*res_blocks), outplanes
 
 
 def add_residual_block(inplanes, outplanes, innerplanes, dilation, stride):
@@ -195,8 +192,8 @@ def add_residual_block(inplanes, outplanes, innerplanes, dilation, stride):
 # ------------------------------------------------------------------------------
 
 def basic_bn_shortcut(inplanes, outplanes, stride):
-    return nn.Sequential(
-        nn.Conv2d(inplanes,
+    return lib.nn.Sequential(
+        lib.nn.Conv2d(inplanes,
                   outplanes,
                   kernel_size=1,
                   stride=stride,
@@ -206,13 +203,13 @@ def basic_bn_shortcut(inplanes, outplanes, stride):
 
 
 def basic_gn_shortcut(inplanes, outplanes, stride):
-    return nn.Sequential(
-        nn.Conv2d(inplanes,
+    return lib.nn.Sequential(
+        lib.nn.Conv2d(inplanes,
                   outplanes,
                   kernel_size=1,
                   stride=stride,
                   bias=False),
-        nn.GroupNorm(net_utils.get_group_gn(outplanes), outplanes,
+        lib.nn.GroupNorm(net_utils.get_group_gn(outplanes), outplanes,
                      eps=cfg.GROUP_NORM.EPSILON)
     )
 
@@ -222,21 +219,21 @@ def basic_gn_shortcut(inplanes, outplanes, stride):
 # ------------------------------------------------------------------------------
 
 def basic_bn_stem():
-    return nn.Sequential(OrderedDict([
-        ('conv1', nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)),
+    return lib.nn.Sequential(OrderedDict([
+        ('conv1', lib.nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)),
         ('bn1', mynn.AffineChannel2d(64)),
-        ('relu', nn.ReLU(inplace=True)),
-        # ('maxpool', nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True))]))
-        ('maxpool', nn.MaxPool2d(kernel_size=3, stride=2, padding=1))]))
+        ('relu', lib.nn.ReLU(inplace=True)),
+        # ('maxpool', lib.nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True))]))
+        ('maxpool', lib.nn.MaxPool2d(kernel_size=3, stride=2, padding=1))]))
 
 
 def basic_gn_stem():
-    return nn.Sequential(OrderedDict([
-        ('conv1', nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)),
-        ('gn1', nn.GroupNorm(net_utils.get_group_gn(64), 64,
+    return lib.nn.Sequential(OrderedDict([
+        ('conv1', lib.nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)),
+        ('gn1', lib.nn.GroupNorm(net_utils.get_group_gn(64), 64,
                              eps=cfg.GROUP_NORM.EPSILON)),
-        ('relu', nn.ReLU(inplace=True)),
-        ('maxpool', nn.MaxPool2d(kernel_size=3, stride=2, padding=1))]))
+        ('relu', lib.nn.ReLU(inplace=True)),
+        ('maxpool', lib.nn.MaxPool2d(kernel_size=3, stride=2, padding=1))]))
 
 
 # ------------------------------------------------------------------------------
@@ -254,21 +251,21 @@ class bottleneck_transformation(nn.Module):
         (str1x1, str3x3) = (stride, 1) if cfg.RESNETS.STRIDE_1X1 else (1, stride)
         self.stride = stride
 
-        self.conv1 = nn.Conv2d(
+        self.conv1 = lib.nn.Conv2d(
             inplanes, innerplanes, kernel_size=1, stride=str1x1, bias=False)
         self.bn1 = mynn.AffineChannel2d(innerplanes)
 
-        self.conv2 = nn.Conv2d(
+        self.conv2 = lib.nn.Conv2d(
             innerplanes, innerplanes, kernel_size=3, stride=str3x3, bias=False,
             padding=1 * dilation, dilation=dilation, groups=group)
         self.bn2 = mynn.AffineChannel2d(innerplanes)
 
-        self.conv3 = nn.Conv2d(
+        self.conv3 = lib.nn.Conv2d(
             innerplanes, outplanes, kernel_size=1, stride=1, bias=False)
         self.bn3 = mynn.AffineChannel2d(outplanes)
 
         self.downsample = downsample
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = lib.nn.ReLU(inplace=True)
 
     def forward(self, x):
         residual = x
@@ -304,24 +301,24 @@ class bottleneck_gn_transformation(nn.Module):
         (str1x1, str3x3) = (stride, 1) if cfg.RESNETS.STRIDE_1X1 else (1, stride)
         self.stride = stride
 
-        self.conv1 = nn.Conv2d(
+        self.conv1 = lib.nn.Conv2d(
             inplanes, innerplanes, kernel_size=1, stride=str1x1, bias=False)
-        self.gn1 = nn.GroupNorm(net_utils.get_group_gn(innerplanes), innerplanes,
+        self.gn1 = lib.nn.GroupNorm(net_utils.get_group_gn(innerplanes), innerplanes,
                                 eps=cfg.GROUP_NORM.EPSILON)
 
-        self.conv2 = nn.Conv2d(
+        self.conv2 = lib.nn.Conv2d(
             innerplanes, innerplanes, kernel_size=3, stride=str3x3, bias=False,
             padding=1 * dilation, dilation=dilation, groups=group)
-        self.gn2 = nn.GroupNorm(net_utils.get_group_gn(innerplanes), innerplanes,
+        self.gn2 = lib.nn.GroupNorm(net_utils.get_group_gn(innerplanes), innerplanes,
                                 eps=cfg.GROUP_NORM.EPSILON)
 
-        self.conv3 = nn.Conv2d(
+        self.conv3 = lib.nn.Conv2d(
             innerplanes, outplanes, kernel_size=1, stride=1, bias=False)
-        self.gn3 = nn.GroupNorm(net_utils.get_group_gn(outplanes), outplanes,
+        self.gn3 = lib.nn.GroupNorm(net_utils.get_group_gn(outplanes), outplanes,
                                 eps=cfg.GROUP_NORM.EPSILON)
 
         self.downsample = downsample
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = lib.nn.ReLU(inplace=True)
 
     def forward(self, x):
         residual = x
